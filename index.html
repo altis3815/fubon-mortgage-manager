@@ -72,7 +72,43 @@ nav button{background:transparent;color:var(--muted);font-size:12px;padding:8px 
    <h2>房貸基本設定</h2>
    <p class="muted">請先核對資料。首次還款日期是推算本金所必需的資料；若不知道目前本金，可先留空，系統會標示資料完整度。</p>
    <label>原始貸款本金（元）</label><input id="sPrincipal" type="number" min="1" step="1">
-   <label>年利率（%）</label><input id="sRate" type="number" min="0" max="30" step="0.001">
+   <label>原始年利率（%）</label>
+<input id="sRate" type="number" min="0" max="30"
+step="0.001" readonly>
+
+<!-- 浮動利率管理 -->
+<div class="card" style="background:#f5f8f6;margin-top:18px">
+
+  <h2>浮動利率管理</h2>
+
+  <div class="metric">
+    <small>目前適用年利率</small>
+    <strong id="currentRateDisplay">2.500%</strong>
+    <small id="currentRateDate">生效日期：2026-05-15</small>
+  </div>
+
+  <h3 style="margin-top:18px">新增利率調整</h3>
+
+  <label>新年利率（%）</label>
+  <input id="newRate" type="number"
+    min="0" max="30" step="0.001"
+    placeholder="例如 2.625">
+
+  <label>新利率生效日期</label>
+  <input id="newRateDate" type="date">
+
+  <div class="actions">
+    <button id="saveRateBtn">新增利率紀錄</button>
+  </div>
+
+  <div id="rateMsg" class="muted"></div>
+
+  <h3 style="margin-top:20px">歷史利率紀錄</h3>
+  <div id="rateHistoryTable" class="tablewrap muted">
+    尚無紀錄
+  </div>
+
+</div>
    <label>原始每月月付金（元）</label><input id="sPayment" type="number" min="1" step="1">
    <label>原始貸款年限（年）</label><input id="sYears" type="number" min="1" max="40" step="1">
    <label>首次正常還款日期</label><input id="sFirstDate" type="date">
@@ -221,7 +257,9 @@ async function loadData(){
  rateHistory=r.data||[];
 
  await ensureInitialRate();
-
+ 
+ renderRateHistory();
+ 
  fillSettings();
  fillEntryDefaults();
  renderDashboard();
@@ -251,6 +289,60 @@ $("pMonth").addEventListener("change",()=>{
  if(found){$("pDate").value=found.payment_date;$("pRegular").value=found.regular_payment;$("pExtra").value=found.extra_principal;$("pStatus").value=found.status;$("pNote").value=found.note||"";}
  else{$("pRegular").value=settings?.monthly_payment??54329;$("pExtra").value=settings?.default_extra_payment??10000;$("pNote").value="";$("pStatus").value="confirmed";}
 });
+
+$("saveRateBtn").onclick = async () => {
+
+  const rate = Number($("newRate").value);
+  const date = $("newRateDate").value;
+
+  if(!date || !Number.isFinite(rate) || rate < 0 || rate > 30){
+    showMsg("rateMsg","請輸入正確的利率及生效日期。","error");
+    return;
+  }
+
+  // 防止新增較早日期，避免覆寫歷史利率順序
+  const latest = [...rateHistory].sort(
+    (a,b)=>b.effective_date.localeCompare(a.effective_date)
+  )[0];
+
+  if(latest && date <= latest.effective_date){
+    showMsg(
+      "rateMsg",
+      "新生效日期必須晚於最近一筆利率紀錄："+latest.effective_date,
+      "error"
+    );
+    return;
+  }
+
+  const {data,error} = await db
+    .from("loan_rate_history")
+    .insert({
+      user_id:user.id,
+      effective_date:date,
+      annual_rate:rate
+    })
+    .select()
+    .single();
+
+  if(error){
+    showMsg("rateMsg","儲存失敗："+error.message,"error");
+    return;
+  }
+
+  rateHistory.push(data);
+
+  $("newRate").value="";
+  $("newRateDate").value="";
+
+  renderRateHistory();
+
+  showMsg(
+    "rateMsg",
+    "利率紀錄新增成功！新利率："+rate.toFixed(3)+"%",
+    "success"
+  );
+};
+
 $("saveSettingsBtn").onclick=async()=>{
  const payload={
   user_id:user.id,original_principal:Number($("sPrincipal").value),annual_rate:Number($("sRate").value),
@@ -302,6 +394,66 @@ function getTotalExtraPrincipal(){
   .reduce((sum, p) => {
    return sum + Number(p.extra_principal || 0);
   }, 0);
+}
+
+function getCurrentRate(){
+  const today = dateNow;
+
+  const valid = rateHistory
+    .filter(r => r.effective_date <= today)
+    .sort((a,b) =>
+      b.effective_date.localeCompare(a.effective_date)
+    );
+
+  return valid[0] || null;
+}
+
+function renderRateHistory(){
+
+  const current = getCurrentRate();
+
+  $("currentRateDisplay").textContent =
+    current
+      ? Number(current.annual_rate).toFixed(3) + "%"
+      : "尚無有效利率";
+
+  $("currentRateDate").textContent =
+    current
+      ? "生效日期：" + current.effective_date
+      : "尚無生效紀錄";
+
+  if(!rateHistory.length){
+    $("rateHistoryTable").textContent = "尚無紀錄";
+    return;
+  }
+
+  let html = `
+    <table>
+      <thead>
+        <tr>
+          <th>生效日期</th>
+          <th>實際年利率</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  [...rateHistory]
+    .sort((a,b) =>
+      b.effective_date.localeCompare(a.effective_date)
+    )
+    .forEach(r=>{
+      html += `
+        <tr>
+          <td>${esc(r.effective_date)}</td>
+          <td>${Number(r.annual_rate).toFixed(3)}%</td>
+        </tr>
+      `;
+    });
+
+  html += "</tbody></table>";
+
+  $("rateHistoryTable").innerHTML = html;
 }
  
 function renderDashboard(){
