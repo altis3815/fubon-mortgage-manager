@@ -56,7 +56,7 @@ nav button{background:transparent;color:var(--muted);font-size:12px;padding:8px 
    <div class="metric"><small>原始貸款本金</small><strong id="principalDisplay">—</strong></div>
    <div class="metric"><small>年利率</small><strong id="rateDisplay">—</strong></div>
    <div class="metric"><small>目前月付金設定</small><strong id="paymentDisplay">—</strong></div>
-   <div class="metric"><small>本月額外還本</small><strong id="extraDisplay">—</strong></div>
+   <div class="metric"><small>累計額外還本</small><strong id="extraDisplay">—</strong></div>
   </div>
   <div class="card" style="margin-top:13px">
    <h2>本月登記狀態</h2><div class="row"><span>本月正常還款</span><strong id="monthRegular">尚未登記</strong></div>
@@ -237,6 +237,15 @@ function calcBalance(){
  }
  return {balance:bal,reason:`依 ${count} 個連續月份的已確認紀錄推算；非銀行實際餘額。`,count};
 }
+// 計算所有已確認的累計額外還本金額
+function getTotalExtraPrincipal(){
+ return payments
+  .filter(p => p.status === "confirmed")
+  .reduce((sum, p) => {
+   return sum + Number(p.extra_principal || 0);
+  }, 0);
+}
+ 
 function renderDashboard(){
  if(!settings){$("balanceDisplay").textContent="請先設定房貸";$("balanceHint").textContent="到「設定」輸入基本資料";return;}
  const calc=calcBalance(),thisMonth=payments.find(p=>p.month_key===monthNow);
@@ -245,7 +254,7 @@ function renderDashboard(){
  $("principalDisplay").textContent=money(settings.original_principal);
  $("rateDisplay").textContent=Number(settings.annual_rate).toFixed(3)+"%";
  $("paymentDisplay").textContent=money(settings.monthly_payment);
- $("extraDisplay").textContent=money(thisMonth?.extra_principal??0);
+ $("extraDisplay").textContent=money(getTotalExtraPrincipal());
  $("monthRegular").textContent=thisMonth?money(thisMonth.regular_payment):"尚未登記";
  $("monthExtra").textContent=thisMonth?money(thisMonth.extra_principal):"尚未登記";
  $("recordCount").textContent=payments.length+" 個月";
