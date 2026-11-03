@@ -269,7 +269,7 @@ function renderAnalysis(){
  $("analysisContent").innerHTML=`<div class="row"><span>推算剩餘本金</span><strong>${money(c.balance)}</strong></div>
  <div class="row"><span>連續已確認月份</span><strong>${c.count} 個月</strong></div>
  <div class="row"><span>累計額外還本</span><strong>${money(totalExtra)}</strong></div>
- <div class="row"><span>依目前本金、利率及剩餘期數估算的新月付金</span><strong>${money(newPayment)}</strong></div>
+ <div class="row"><span>依目前本金利率及期數估算新月付金</span><strong>${money(newPayment)}</strong></div>
  <p class="muted">目前模式：${mode==="reduce"?"降低月付金、維持原到期日":"維持月付金、縮短還款年限"}。此處新月付金為簡化估算；若利率變動、銀行重新訂定攤還期數或有費用，結果會不同。</p>`;
 }
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
