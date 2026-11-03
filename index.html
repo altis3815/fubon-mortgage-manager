@@ -120,6 +120,7 @@ nav button{background:transparent;color:var(--muted);font-size:12px;padding:8px 
 const SUPABASE_URL = "https://cyflxewdnlldqrinmxdo.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_oaZbPUCD8WldPpjQzo2dqg_8FOVrlSd";
 let db = null, user = null, settings = null, payments = [];
+let rateHistory = [];
 
 const $ = id => document.getElementById(id);
 const money = n => Number.isFinite(Number(n)) ? "NT$ " + Math.round(Number(n)).toLocaleString("zh-TW") : "—";
@@ -161,15 +162,40 @@ $("loginBtn").onclick=async()=>{
  showMsg("authMsg",error?error.message:"登入成功。",error?"error":"success");
 };
 $("logoutBtn").onclick=async()=>{if(db)await db.auth.signOut();};
+
 async function loadData(){
- const [s,p]=await Promise.all([
-  db.from("loan_settings").select("*").eq("user_id",user.id).maybeSingle(),
-  db.from("monthly_payments").select("*").eq("user_id",user.id).order("month_key",{ascending:false})
+ const [s,p,r]=await Promise.all([
+  db.from("loan_settings")
+    .select("*")
+    .eq("user_id",user.id)
+    .maybeSingle(),
+
+  db.from("monthly_payments")
+    .select("*")
+    .eq("user_id",user.id)
+    .order("month_key",{ascending:false}),
+
+  db.from("loan_rate_history")
+    .select("*")
+    .eq("user_id",user.id)
+    .order("effective_date",{ascending:true})
  ]);
- if(s.error||p.error){alert("讀取資料失敗："+(s.error||p.error).message);return;}
- settings=s.data;payments=p.data||[];
- fillSettings();fillEntryDefaults();renderDashboard();renderHistory();
+
+ if(s.error||p.error||r.error){
+  alert("讀取資料失敗："+(s.error||p.error||r.error).message);
+  return;
+ }
+
+ settings=s.data;
+ payments=p.data||[];
+ rateHistory=r.data||[];
+
+ fillSettings();
+ fillEntryDefaults();
+ renderDashboard();
+ renderHistory();
 }
+
 function fillSettings(){
  const d=settings||{};
  $("sPrincipal").value=d.original_principal??13750000;
