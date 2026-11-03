@@ -163,6 +163,36 @@ $("loginBtn").onclick=async()=>{
 };
 $("logoutBtn").onclick=async()=>{if(db)await db.auth.signOut();};
 
+async function ensureInitialRate(){
+  const initialDate = "2026-05-15";
+
+  // 已有起始紀錄就不重複建立
+  const exists = rateHistory.some(
+    r => r.effective_date === initialDate
+  );
+
+  if(exists) return;
+
+  const {data,error} = await db
+    .from("loan_rate_history")
+    .insert({
+      user_id: user.id,
+      effective_date: initialDate,
+      annual_rate: 2.5
+    })
+    .select()
+    .single();
+
+  if(error){
+    alert("建立原始利率紀錄失敗：" + error.message);
+    return;
+  }
+
+  rateHistory.push(data);
+
+  alert("原始利率紀錄建立成功：2026-05-15，年利率 2.500%");
+}
+ 
 async function loadData(){
  const [s,p,r]=await Promise.all([
   db.from("loan_settings")
@@ -189,6 +219,8 @@ async function loadData(){
  settings=s.data;
  payments=p.data||[];
  rateHistory=r.data||[];
+
+ await ensureInitialRate();
 
  fillSettings();
  fillEntryDefaults();
