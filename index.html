@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#173b36">
+<title>富邦房貸管家</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--green:#173b36;--green2:#28665b;--bg:#f4f7f5;--card:#fff;--text:#1e2b27;--muted:#718078;--line:#e2e9e5;--gold:#b68b48;--red:#b54747}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif}
+header{background:var(--green);color:#fff;padding:22px 18px 18px;position:sticky;top:0;z-index:5}
+.headrow{display:flex;align-items:center;justify-content:space-between;gap:12px}h1{font-size:20px;margin:0;font-weight:750}.sub{font-size:12px;color:#d3e2dc;margin-top:5px}
+main{max-width:760px;margin:auto;padding:16px 14px 100px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:0 0 13px;box-shadow:0 2px 8px #193b3610}
+.hero{background:linear-gradient(135deg,#173b36,#28665b);color:#fff;border:0}.hero .muted{color:#d4e4de}.big{font-size:30px;font-weight:800;letter-spacing:.3px;margin:8px 0 2px;word-break:break-word}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{background:#f5f8f6;border-radius:12px;padding:12px}.metric small{display:block;color:var(--muted);font-size:12px}.metric strong{display:block;font-size:18px;margin-top:6px;overflow-wrap:anywhere}
+h2{font-size:17px;margin:0 0 13px}h3{font-size:14px;margin:0 0 8px}.muted{color:var(--muted);font-size:12px;line-height:1.6}
+label{display:block;font-size:13px;font-weight:650;margin:12px 0 6px}input,select,textarea{width:100%;border:1px solid #d7e1db;border-radius:10px;padding:12px;font-size:16px;background:#fff;color:var(--text);min-height:46px}
+input:focus,select:focus,textarea:focus{outline:2px solid #9bc5b8;border-color:var(--green2)}
+button{border:0;border-radius:11px;padding:12px 15px;font-size:15px;font-weight:700;cursor:pointer;background:var(--green);color:#fff;min-height:44px}
+button.secondary{background:#eaf1ed;color:var(--green)}button.danger{background:#fff0f0;color:var(--red)}button:disabled{opacity:.5}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.actions button{flex:1}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:8}
+nav button{background:transparent;color:var(--muted);font-size:12px;padding:8px 5px;min-height:48px;flex:1}nav button.active{color:var(--green);background:#edf4f0}
+.page{display:none}.page.active{display:block}.hidden{display:none!important}
+.notice{padding:11px 12px;border-radius:10px;background:#fff7e8;color:#76561c;font-size:13px;line-height:1.55;margin:10px 0}
+.success{background:#edf7f0;color:#245b38}.error{background:#fff0f0;color:#9d3333}
+.row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}.row:last-child{border-bottom:0}
+.tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:12px;min-width:470px}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--muted);font-weight:650}
+.auth{max-width:480px;margin:25px auto;padding:18px}.pill{display:inline-block;padding:4px 8px;border-radius:30px;background:#eaf1ed;color:var(--green);font-size:11px;font-weight:700}
+.smallbtn{font-size:12px;padding:8px 10px;min-height:34px}.footer{padding:10px;text-align:center;color:var(--muted);font-size:11px}
+@media(min-width:600px){main{padding-top:22px}.big{font-size:36px}}
+</style>
+</head>
+<body>
+<header>
+ <div class="headrow"><div><h1>富邦房貸管家</h1><div class="sub">個人房貸紀錄與還款試算</div></div><button id="logoutBtn" class="secondary hidden smallbtn">登出</button></div>
+</header>
+
+<section id="authPanel" class="auth card">
+ <h2>登入／建立帳號</h2>
+ <p class="muted">請使用自己的電子郵件建立個人帳號。資料會存放在你的 Supabase 專案中。</p>
+ <label>電子郵件</label><input id="authEmail" type="email" autocomplete="email" placeholder="name@example.com">
+ <label>密碼（至少 8 碼）</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="請設定密碼">
+ <div class="actions"><button id="signupBtn">建立帳號</button><button id="loginBtn" class="secondary">登入</button></div>
+ <div id="authMsg" class="muted" role="status"></div>
+</section>
+
+<main id="app" class="hidden">
+ <section id="dashboard" class="page active">
+  <div class="card hero">
+   <div class="muted">目前推算剩餘本金</div><div class="big" id="balanceDisplay">尚未建立基準</div>
+   <div class="muted" id="balanceHint">設定首次還款日期並補登連續紀錄後顯示</div>
+  </div>
+  <div class="grid">
+   <div class="metric"><small>原始貸款本金</small><strong id="principalDisplay">—</strong></div>
+   <div class="metric"><small>年利率</small><strong id="rateDisplay">—</strong></div>
+   <div class="metric"><small>目前月付金設定</small><strong id="paymentDisplay">—</strong></div>
+   <div class="metric"><small>本月額外還本</small><strong id="extraDisplay">—</strong></div>
+  </div>
+  <div class="card" style="margin-top:13px">
+   <h2>本月登記狀態</h2><div class="row"><span>本月正常還款</span><strong id="monthRegular">尚未登記</strong></div>
+   <div class="row"><span>本月額外還本</span><strong id="monthExtra">尚未登記</strong></div>
+   <div class="row"><span>紀錄月份數</span><strong id="recordCount">0 個月</strong></div>
+   <div class="actions"><button onclick="showPage('entry')">＋ 登記本月還款</button><button class="secondary" onclick="showPage('settings')">房貸設定</button></div>
+  </div>
+  <div class="notice">提醒：目前只能依你輸入的資料估算，並非富邦人壽即時帳務。E-mail 只有應繳通知時，請勿把應繳總額當成銀行確認的本金餘額。</div>
+ </section>
+
+ <section id="settings" class="page">
+  <div class="card">
+   <h2>房貸基本設定</h2>
+   <p class="muted">請先核對資料。首次還款日期是推算本金所必需的資料；若不知道目前本金，可先留空，系統會標示資料完整度。</p>
+   <label>原始貸款本金（元）</label><input id="sPrincipal" type="number" min="1" step="1">
+   <label>年利率（%）</label><input id="sRate" type="number" min="0" max="30" step="0.001">
+   <label>原始每月月付金（元）</label><input id="sPayment" type="number" min="1" step="1">
+   <label>原始貸款年限（年）</label><input id="sYears" type="number" min="1" max="40" step="1">
+   <label>首次正常還款日期</label><input id="sFirstDate" type="date">
+   <label>目前剩餘本金（若尚不清楚可留空）</label><input id="sCurrentBalance" type="number" min="0" step="1" placeholder="尚不清楚可留空">
+   <label>提前還款模式</label><select id="sMode"><option value="reduce">降低月付金，維持原到期日</option><option value="shorten">維持月付金，縮短還款年限</option></select>
+   <label>每月預設額外還本金額（元）</label><input id="sExtra" type="number" min="0" step="1">
+   <div class="actions"><button id="saveSettingsBtn">儲存房貸設定</button></div><div id="settingsMsg" class="muted"></div>
+  </div>
+ </section>
+
+ <section id="entry" class="page">
+  <div class="card">
+   <h2>每月還款登記</h2>
+   <p class="muted">依富邦人壽 E-mail 輸入正常繳款資料；額外還本請以已實際入帳並沖抵本金的金額為準。</p>
+   <label>還款月份</label><input id="pMonth" type="month">
+   <label>實際還款日期</label><input id="pDate" type="date">
+   <label>正常還款金額（元）</label><input id="pRegular" type="number" min="0" step="1">
+   <label>額外提前還本金額（元）</label><input id="pExtra" type="number" min="0" step="1">
+   <label>資料確認狀態</label><select id="pStatus"><option value="confirmed">已確認實際入帳</option><option value="pending">尚待確認入帳</option></select>
+   <label>備註（例如 E-mail 通知日期或交易識別）</label><textarea id="pNote" rows="2" placeholder="選填；不要輸入身分證字號、帳號或密碼"></textarea>
+   <div class="actions"><button id="savePaymentBtn">儲存本月紀錄</button></div><div id="paymentMsg" class="muted"></div>
+  </div>
+ </section>
+
+ <section id="history" class="page">
+  <div class="card"><h2>每月還款歷史</h2><p class="muted">可查看及修正自己登記的資料。</p><div id="historyTable" class="tablewrap muted">尚無紀錄</div></div>
+ </section>
+
+ <section id="analysis" class="page">
+  <div class="card"><h2>本金推算與試算</h2><div id="analysisContent" class="muted">請先完成房貸設定及連續月份紀錄。</div></div>
+  <div class="notice">第一階段採月利率估算（年利率 ÷ 12），實際銀行可能依日計息、入帳日、利率調整及提前清償規則計算。正式結清金額以富邦人壽提供的資料為準。</div>
+ </section>
+</main>
+
+<nav id="bottomNav" class="hidden">
+ <button class="active" data-page="dashboard">⌂<br>總覽</button>
+ <button data-page="settings">⚙<br>設定</button>
+ <button data-page="entry">＋<br>登記</button>
+ <button data-page="history">▤<br>紀錄</button>
+ <button data-page="analysis">▥<br>試算</button>
+</nav>
+<div class="footer">富邦房貸管家｜個人記帳與估算工具，非金融機構官方服務</div>
+
+<script>
+const SUPABASE_URL = "請填入你的_SUPABASE_PROJECT_URL";
+const SUPABASE_ANON_KEY = "請填入你的_SUPABASE_ANON_PUBLIC_KEY";
+let db = null, user = null, settings = null, payments = [];
+
+const $ = id => document.getElementById(id);
+const money = n => Number.isFinite(Number(n)) ? "NT$ " + Math.round(Number(n)).toLocaleString("zh-TW") : "—";
+const today = new Date();
+const monthNow = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}`;
+const dateNow = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+
+function showMsg(id,msg,type=""){const el=$(id);el.textContent=msg;el.className=type?`notice ${type}`:"muted";}
+function showPage(name){
+ document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===name));
+ document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===name));
+ if(name==="analysis") renderAnalysis();
+}
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>showPage(b.dataset.page)));
+
+function configured(){return !SUPABASE_URL.includes("請填入")&&!SUPABASE_ANON_KEY.includes("請填入");}
+async function init(){
+ if(!configured()){ $("authMsg").textContent="尚未設定 Supabase 網址及 anon public key。請先依操作說明修改程式碼。"; return; }
+ db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+ const {data:{session}}=await db.auth.getSession();
+ if(session){user=session.user;await enterApp();}
+ db.auth.onAuthStateChange(async(_event,session)=>{if(session){user=session.user;await enterApp();}else{user=null;showAuth();}});
+}
+function showAuth(){$("authPanel").classList.remove("hidden");$("app").classList.add("hidden");$("bottomNav").classList.add("hidden");$("logoutBtn").classList.add("hidden");}
+async function enterApp(){
+ $("authPanel").classList.add("hidden");$("app").classList.remove("hidden");$("bottomNav").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
+ await loadData();
+}
+$("signupBtn").onclick=async()=>{
+ if(!db){showMsg("authMsg","請先完成 Supabase 設定。","error");return;}
+ const email=$("authEmail").value.trim(),password=$("authPassword").value;
+ if(!email||password.length<8){showMsg("authMsg","請輸入有效 Email，密碼至少 8 碼。","error");return;}
+ const {error}=await db.auth.signUp({email,password});
+ showMsg("authMsg",error?error.message:"帳號建立要求已送出。若有啟用 Email 確認，請先到信箱完成驗證，再登入。",error?"error":"success");
+};
+$("loginBtn").onclick=async()=>{
+ if(!db){showMsg("authMsg","請先完成 Supabase 設定。","error");return;}
+ const {error}=await db.auth.signInWithPassword({email:$("authEmail").value.trim(),password:$("authPassword").value});
+ showMsg("authMsg",error?error.message:"登入成功。",error?"error":"success");
+};
+$("logoutBtn").onclick=async()=>{if(db)await db.auth.signOut();};
+async function loadData(){
+ const [s,p]=await Promise.all([
+  db.from("loan_settings").select("*").eq("user_id",user.id).maybeSingle(),
+  db.from("monthly_payments").select("*").eq("user_id",user.id).order("month_key",{ascending:false})
+ ]);
+ if(s.error||p.error){alert("讀取資料失敗："+(s.error||p.error).message);return;}
+ settings=s.data;payments=p.data||[];
+ fillSettings();fillEntryDefaults();renderDashboard();renderHistory();
+}
+function fillSettings(){
+ const d=settings||{};
+ $("sPrincipal").value=d.original_principal??13750000;
+ $("sRate").value=d.annual_rate??2.5;
+ $("sPayment").value=d.monthly_payment??54329;
+ $("sYears").value=d.term_years??30;
+ $("sFirstDate").value=d.first_payment_date??"";
+ $("sCurrentBalance").value=d.current_balance??"";
+ $("sMode").value=d.prepayment_mode??"reduce";
+ $("sExtra").value=d.default_extra_payment??10000;
+}
+function fillEntryDefaults(){
+ $("pMonth").value=monthNow;$("pDate").value=dateNow;
+ $("pRegular").value=settings?.monthly_payment??54329;
+ $("pExtra").value=settings?.default_extra_payment??10000;
+ const found=payments.find(p=>p.month_key===monthNow);
+ if(found){$("pDate").value=found.payment_date;$("pRegular").value=found.regular_payment;$("pExtra").value=found.extra_principal;$("pStatus").value=found.status;$("pNote").value=found.note||"";}
+}
+$("pMonth").addEventListener("change",()=>{
+ const m=$("pMonth").value,found=payments.find(p=>p.month_key===m);
+ if(found){$("pDate").value=found.payment_date;$("pRegular").value=found.regular_payment;$("pExtra").value=found.extra_principal;$("pStatus").value=found.status;$("pNote").value=found.note||"";}
+ else{$("pRegular").value=settings?.monthly_payment??54329;$("pExtra").value=settings?.default_extra_payment??10000;$("pNote").value="";$("pStatus").value="confirmed";}
+});
+$("saveSettingsBtn").onclick=async()=>{
+ const payload={
+  user_id:user.id,original_principal:Number($("sPrincipal").value),annual_rate:Number($("sRate").value),
+  monthly_payment:Number($("sPayment").value),term_years:Number($("sYears").value),
+  first_payment_date:$("sFirstDate").value||null,
+  current_balance:$("sCurrentBalance").value===""?null:Number($("sCurrentBalance").value),
+  prepayment_mode:$("sMode").value,default_extra_payment:Number($("sExtra").value),updated_at:new Date().toISOString()
+ };
+ if(!(payload.original_principal>0&&payload.annual_rate>=0&&payload.monthly_payment>0&&payload.term_years>0)){showMsg("settingsMsg","請檢查本金、利率、月付金及年限。","error");return;}
+ const {error}=await db.from("loan_settings").upsert(payload,{onConflict:"user_id"});
+ if(error){showMsg("settingsMsg","儲存失敗："+error.message,"error");return;}
+ showMsg("settingsMsg","房貸設定已儲存。","success");await loadData();
+};
+$("savePaymentBtn").onclick=async()=>{
+ const month=$("pMonth").value,date=$("pDate").value,regular=Number($("pRegular").value),extra=Number($("pExtra").value);
+ if(!month||!date||regular<0||extra<0||!Number.isFinite(regular)||!Number.isFinite(extra)){showMsg("paymentMsg","請確認月份、日期及金額。","error");return;}
+ if(!settings){showMsg("paymentMsg","請先到「設定」儲存房貸基本資料。","error");return;}
+ const payload={user_id:user.id,month_key:month,payment_date:date,regular_payment:regular,extra_principal:extra,status:$("pStatus").value,note:$("pNote").value.trim()||null,updated_at:new Date().toISOString()};
+ const {error}=await db.from("monthly_payments").upsert(payload,{onConflict:"user_id,month_key"});
+ if(error){showMsg("paymentMsg","儲存失敗："+error.message,"error");return;}
+ showMsg("paymentMsg","本月還款紀錄已儲存。","success");await loadData();showPage("dashboard");
+};
+
+function calcBalance(){
+ if(!settings)return {balance:null,reason:"請先完成房貸設定。",count:0};
+ const start=settings.first_payment_date;
+ if(!start)return {balance:null,reason:"請先設定首次正常還款日期。",count:0};
+ const confirmed=payments.filter(p=>p.status==="confirmed").sort((a,b)=>a.month_key.localeCompare(b.month_key));
+ if(!confirmed.length)return {balance:null,reason:"尚無已確認的還款紀錄。",count:0};
+ const startMonth=start.slice(0,7),last=confirmed[confirmed.length-1].month_key;
+ const byMonth=new Map(confirmed.map(p=>[p.month_key,p]));
+ let bal=settings.original_principal,cur=new Date(startMonth+"-01T00:00:00"),end=new Date(last+"-01T00:00:00"),count=0;
+ while(cur<=end){
+  const key=`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,"0")}`;
+  const p=byMonth.get(key);
+  if(!p)return {balance:null,reason:`缺少 ${key} 的已確認紀錄；請補登歷史月份，避免低估本金。`,count};
+  const interest=bal*(Number(settings.annual_rate)/100)/12;
+  const principal=Math.max(0,Number(p.regular_payment)-interest);
+  bal=Math.max(0,bal-principal-Number(p.extra_principal));
+  count++;
+  cur.setMonth(cur.getMonth()+1);
+ }
+ return {balance:bal,reason:`依 ${count} 個連續月份的已確認紀錄推算；非銀行實際餘額。`,count};
+}
+function renderDashboard(){
+ if(!settings){$("balanceDisplay").textContent="請先設定房貸";$("balanceHint").textContent="到「設定」輸入基本資料";return;}
+ const calc=calcBalance(),thisMonth=payments.find(p=>p.month_key===monthNow);
+ $("balanceDisplay").textContent=calc.balance===null?"尚無完整資料":money(calc.balance);
+ $("balanceHint").textContent=calc.reason;
+ $("principalDisplay").textContent=money(settings.original_principal);
+ $("rateDisplay").textContent=Number(settings.annual_rate).toFixed(3)+"%";
+ $("paymentDisplay").textContent=money(settings.monthly_payment);
+ $("extraDisplay").textContent=money(thisMonth?.extra_principal??0);
+ $("monthRegular").textContent=thisMonth?money(thisMonth.regular_payment):"尚未登記";
+ $("monthExtra").textContent=thisMonth?money(thisMonth.extra_principal):"尚未登記";
+ $("recordCount").textContent=payments.length+" 個月";
+}
+function renderHistory(){
+ if(!payments.length){$("historyTable").textContent="尚無紀錄";return;}
+ let html="<table><thead><tr><th>月份</th><th>正常還款</th><th>額外還本</th><th>狀態</th><th>日期</th></tr></thead><tbody>";
+ payments.forEach(p=>{html+=`<tr><td>${esc(p.month_key)}</td><td>${money(p.regular_payment)}</td><td>${money(p.extra_principal)}</td><td>${p.status==="confirmed"?"已確認":"待確認"}</td><td>${esc(p.payment_date)}</td></tr>`;});
+ $("historyTable").innerHTML=html+"</tbody></table>";
+}
+function renderAnalysis(){
+ const c=calcBalance();
+ if(c.balance===null){$("analysisContent").textContent=c.reason;return;}
+ const rate=Number(settings.annual_rate)/1200,months=Number(settings.term_years)*12;
+ const remainingMonths=Math.max(1,months-c.count);
+ const mode=settings.prepayment_mode;
+ let newPayment=Number(settings.monthly_payment);
+ if(mode==="reduce"&&rate>0)newPayment=c.balance*rate/(1-Math.pow(1+rate,-remainingMonths));
+ else if(mode==="reduce")newPayment=c.balance/remainingMonths;
+ let totalExtra=payments.filter(p=>p.status==="confirmed").reduce((a,p)=>a+Number(p.extra_principal),0);
+ $("analysisContent").innerHTML=`<div class="row"><span>推算剩餘本金</span><strong>${money(c.balance)}</strong></div>
+ <div class="row"><span>連續已確認月份</span><strong>${c.count} 個月</strong></div>
+ <div class="row"><span>累計額外還本</span><strong>${money(totalExtra)}</strong></div>
+ <div class="row"><span>依目前本金、利率及剩餘期數估算的新月付金</span><strong>${money(newPayment)}</strong></div>
+ <p class="muted">目前模式：${mode==="reduce"?"降低月付金、維持原到期日":"維持月付金、縮短還款年限"}。此處新月付金為簡化估算；若利率變動、銀行重新訂定攤還期數或有費用，結果會不同。</p>`;
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+init();
+</script>
+</body>
+</html>
