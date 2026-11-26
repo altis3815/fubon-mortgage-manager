@@ -187,16 +187,47 @@ document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()
 
 function configured(){return !SUPABASE_URL.includes("請填入")&&!SUPABASE_ANON_KEY.includes("請填入");}
 async function init(){
- if(!configured()){ $("authMsg").textContent="尚未設定 Supabase 網址及 anon public key。請先依操作說明修改程式碼。"; return; }
- db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
- const {data:{session}}=await db.auth.getSession();
- if(session){user=session.user;await enterApp();}
- db.auth.onAuthStateChange(async(_event,session)=>{if(session){user=session.user;await enterApp();}else{user=null;showAuth();}});
+  if(!configured()){
+    $("authMsg").textContent =
+      "尚未設定 Supabase 網址及 anon public key。";
+    return;
+  }
+
+  db = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+  db.auth.onAuthStateChange((event, session)=>{
+
+    if(event === "PASSWORD_RECOVERY"){
+      showRecovery();
+      return;
+    }
+
+    if(session){
+      user = session.user;
+      enterApp();
+    }else{
+      user = null;
+      showAuth();
+    }
+
+  });
 }
-function showAuth(){$("authPanel").classList.remove("hidden");$("app").classList.add("hidden");$("bottomNav").classList.add("hidden");$("logoutBtn").classList.add("hidden");}
-async function enterApp(){
- $("authPanel").classList.add("hidden");$("app").classList.remove("hidden");$("bottomNav").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");
- await loadData();
+function showAuth(){
+  $("authPanel").classList.remove("hidden");
+  $("recoveryPanel").classList.add("hidden");
+  $("app").classList.add("hidden");
+  $("bottomNav").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
+}
+function showRecovery(){
+  $("authPanel").classList.add("hidden");
+  $("recoveryPanel").classList.remove("hidden");
+  $("app").classList.add("hidden");
+  $("bottomNav").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
 }
 $("signupBtn").onclick=async()=>{
  if(!db){showMsg("authMsg","請先完成 Supabase 設定。","error");return;}
@@ -225,7 +256,9 @@ $("forgotPasswordBtn").onclick = async () => {
     return;
   }
 
-  const {error} = await db.auth.resetPasswordForEmail(email);
+  const {error} = await db.auth.resetPasswordForEmail(email,{
+  redirectTo: "https://altis3815.github.io/fubon-mortgage-manager/"
+});
 
   if(error){
     showMsg("authMsg","寄送失敗："+error.message,"error");
@@ -238,7 +271,43 @@ $("forgotPasswordBtn").onclick = async () => {
     "success"
   );
 };
+$("updatePasswordBtn").onclick = async () => {
 
+  const password = $("newPassword").value;
+  const confirm = $("confirmNewPassword").value;
+
+  if(password.length < 8){
+    showMsg("recoveryMsg","新密碼至少需要 8 碼。","error");
+    return;
+  }
+
+  if(password !== confirm){
+    showMsg("recoveryMsg","兩次輸入的密碼不一致。","error");
+    return;
+  }
+
+  const {error} = await db.auth.updateUser({
+    password: password
+  });
+
+  if(error){
+    showMsg("recoveryMsg","密碼更新失敗："+error.message,"error");
+    return;
+  }
+
+  await db.auth.signOut();
+
+  $("newPassword").value = "";
+  $("confirmNewPassword").value = "";
+  $("authPassword").value = "";
+
+  showMsg(
+    "authMsg",
+    "新密碼更新成功！請使用新密碼重新登入。",
+    "success"
+  );
+};
+ 
 $("logoutBtn").onclick=async()=>{if(db)await db.auth.signOut();};
 
 async function ensureInitialRate(){
