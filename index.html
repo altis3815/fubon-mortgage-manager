@@ -52,7 +52,28 @@ nav button{background:transparent;color:var(--muted);font-size:12px;padding:8px 
  </div>
  <div id="authMsg" class="muted" role="status"></div>
 </section>
+<section id="recoveryPanel" class="auth card hidden">
+  <h2>設定新密碼</h2>
+  <p class="muted">請輸入新密碼，完成後即可重新登入。</p>
 
+  <label>新密碼（至少 8 碼）</label>
+  <input id="newPassword"
+         type="password"
+         autocomplete="new-password"
+         placeholder="請輸入新密碼">
+
+  <label>再次輸入新密碼</label>
+  <input id="confirmNewPassword"
+         type="password"
+         autocomplete="new-password"
+         placeholder="請再次輸入新密碼">
+
+  <div class="actions">
+    <button id="updatePasswordBtn">儲存新密碼</button>
+  </div>
+
+  <div id="recoveryMsg" class="muted"></div>
+</section>
 <main id="app" class="hidden">
  <section id="dashboard" class="page active">
   <div class="card hero">
@@ -185,7 +206,10 @@ function showPage(name){
 }
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>showPage(b.dataset.page)));
 
-function configured(){return !SUPABASE_URL.includes("請填入")&&!SUPABASE_ANON_KEY.includes("請填入");}
+function configured(){
+  return SUPABASE_URL.startsWith("https://") &&
+         SUPABASE_ANON_KEY.startsWith("sb_publishable_");
+}
 async function init(){
 
   $("authMsg").textContent = "正在初始化 Supabase...";
