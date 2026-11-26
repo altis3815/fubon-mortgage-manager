@@ -198,6 +198,10 @@ async function init(){
     SUPABASE_URL,
     SUPABASE_ANON_KEY
   );
+ if(!db){
+  $("authMsg").textContent = "Supabase 初始化失敗";
+  return;
+ }
   console.log("Supabase 初始化成功：", !!db);
  $("authMsg").textContent = "Supabase 初始化成功：" + !!db;
   db.auth.onAuthStateChange((event, session)=>{
