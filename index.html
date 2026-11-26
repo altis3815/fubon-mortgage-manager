@@ -203,6 +203,35 @@ $("loginBtn").onclick=async()=>{
  const {error}=await db.auth.signInWithPassword({email:$("authEmail").value.trim(),password:$("authPassword").value});
  showMsg("authMsg",error?error.message:"登入成功。",error?"error":"success");
 };
+
+$("forgotPasswordBtn").onclick = async () => {
+
+  if(!db){
+    showMsg("authMsg","資料庫尚未連線。","error");
+    return;
+  }
+
+  const email = $("authEmail").value.trim();
+
+  if(!email){
+    showMsg("authMsg","請先輸入註冊時使用的 Email。","error");
+    return;
+  }
+
+  const {error} = await db.auth.resetPasswordForEmail(email);
+
+  if(error){
+    showMsg("authMsg","寄送失敗："+error.message,"error");
+    return;
+  }
+
+  showMsg(
+    "authMsg",
+    "重設密碼要求已送出。請檢查 Email 收件匣及垃圾郵件。",
+    "success"
+  );
+};
+
 $("logoutBtn").onclick=async()=>{if(db)await db.auth.signOut();};
 
 async function ensureInitialRate(){
