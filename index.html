@@ -735,7 +735,9 @@ async function enterApp(){
   await loadData();
 }
 $("authMsg").textContent = "測試成功：JavaScript 已經啟動";
-
+$("signupBtn").onclick = () => alert("建立帳號按鈕已觸發");
+$("loginBtn").onclick = () => alert("登入按鈕已觸發");
+$("forgotPasswordBtn").onclick = () => alert("忘記密碼按鈕已觸發");
 init();
 </script>
 </body>
