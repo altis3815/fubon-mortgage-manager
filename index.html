@@ -187,39 +187,52 @@ document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()
 
 function configured(){return !SUPABASE_URL.includes("請填入")&&!SUPABASE_ANON_KEY.includes("請填入");}
 async function init(){
- console.log("開始執行 init()");
+
+  $("authMsg").textContent = "正在初始化 Supabase...";
+
   if(!configured()){
     $("authMsg").textContent =
-      "尚未設定 Supabase 網址及 anon public key。";
+      "尚未設定 Supabase 網址及公開金鑰。";
     return;
   }
 
-  db = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY
-  );
- if(!db){
-  $("authMsg").textContent = "Supabase 初始化失敗";
-  return;
- }
-  console.log("Supabase 初始化成功：", !!db);
- $("authMsg").textContent = "Supabase 初始化成功：" + !!db;
-  db.auth.onAuthStateChange((event, session)=>{
+  try {
 
-    if(event === "PASSWORD_RECOVERY"){
-      showRecovery();
-      return;
+    if(!window.supabase){
+      throw new Error("Supabase 套件沒有成功載入");
     }
 
-    if(session){
-      user = session.user;
-      enterApp();
-    }else{
-      user = null;
-      showAuth();
-    }
+    db = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    );
 
-  });
+    $("authMsg").textContent =
+      "Supabase 初始化成功，正在確認登入狀態...";
+
+    db.auth.onAuthStateChange((event, session)=>{
+
+      if(event === "PASSWORD_RECOVERY"){
+        showRecovery();
+        return;
+      }
+
+      if(session){
+        user = session.user;
+        enterApp();
+      }else{
+        user = null;
+        showAuth();
+      }
+
+    });
+
+  } catch(error) {
+
+    $("authMsg").textContent =
+      "初始化失敗：" + error.message;
+
+  }
 }
 function showAuth(){
   $("authPanel").classList.remove("hidden");
