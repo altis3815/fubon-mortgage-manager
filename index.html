@@ -293,22 +293,7 @@ function showRecovery(){
   $("bottomNav").classList.add("hidden");
   $("logoutBtn").classList.add("hidden");
 }
-document.addEventListener("DOMContentLoaded", () => {
 
-  alert("JavaScript 按鈕測試程式已執行");
-
-  const signup = document.getElementById("signupBtn");
-  const login = document.getElementById("loginBtn");
-  const forgot = document.getElementById("forgotPasswordBtn");
-
-  alert(
-    "按鈕搜尋結果：\n" +
-    "建立帳號：" + !!signup + "\n" +
-    "登入：" + !!login + "\n" +
-    "忘記密碼：" + !!forgot
-  );
-
-});
 $("signupBtn").onclick=async()=>{
  if(!db){showMsg("authMsg","請先完成 Supabase 設定。","error");return;}
  const email=$("authEmail").value.trim(),password=$("authPassword").value;
@@ -368,8 +353,6 @@ $("forgotPasswordBtn").onclick = async () => {
 
 };
 
-
-let isPasswordRecovery = false;
 
 $("updatePasswordBtn").onclick = async () => {
 
@@ -734,10 +717,7 @@ async function enterApp(){
 
   await loadData();
 }
-$("authMsg").textContent = "測試成功：JavaScript 已經啟動";
-$("signupBtn").onclick = () => alert("建立帳號按鈕已觸發");
-$("loginBtn").onclick = () => alert("登入按鈕已觸發");
-$("forgotPasswordBtn").onclick = () => alert("忘記密碼按鈕已觸發");
+
 init();
 </script>
 </body>
