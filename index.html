@@ -190,6 +190,7 @@ step="0.001" readonly>
 const SUPABASE_URL = "https://cyflxewdnlldqrinmxdo.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_oaZbPUCD8WldPpjQzo2dqg_8FOVrlSd";
 let db = null, user = null, settings = null, payments = [];
+let isPasswordRecovery = false;
 let rateHistory = [];
 
 const $ = id => document.getElementById(id);
@@ -235,6 +236,23 @@ async function init(){
       "Supabase 初始化成功，正在確認登入狀態...";
 
     db.auth.onAuthStateChange((event, session)=>{
+
+  if(event === "PASSWORD_RECOVERY"){
+    isPasswordRecovery = true;
+    showRecovery();
+    return;
+  }
+
+  if(session){
+    user = session.user;
+    enterApp();
+  }else{
+    user = null;
+    isPasswordRecovery = false;
+    showAuth();
+  }
+
+});
 
       if(event === "PASSWORD_RECOVERY"){
         showRecovery();
@@ -314,42 +332,67 @@ $("forgotPasswordBtn").onclick = async () => {
     "success"
   );
 };
+
+let isPasswordRecovery = false;
+
 $("updatePasswordBtn").onclick = async () => {
+
+  if (!db) {
+    showMsg("recoveryMsg", "Supabase 尚未初始化。", "error");
+    return;
+  }
+
+  if (!isPasswordRecovery) {
+    showMsg(
+      "recoveryMsg",
+      "尚未確認密碼重設驗證狀態，請重新開啟重設信連結。",
+      "error"
+    );
+    return;
+  }
 
   const password = $("newPassword").value;
   const confirm = $("confirmNewPassword").value;
 
-  if(password.length < 8){
-    showMsg("recoveryMsg","新密碼至少需要 8 碼。","error");
+  if (password.length < 8) {
+    showMsg("recoveryMsg", "新密碼至少需要 8 碼。", "error");
     return;
   }
 
-  if(password !== confirm){
-    showMsg("recoveryMsg","兩次輸入的密碼不一致。","error");
+  if (password !== confirm) {
+    showMsg("recoveryMsg", "兩次輸入的密碼不一致。", "error");
     return;
   }
 
-  const {error} = await db.auth.updateUser({
+  const { data, error } = await db.auth.updateUser({
     password: password
   });
 
-  if(error){
-    showMsg("recoveryMsg","密碼更新失敗："+error.message,"error");
+  if (error) {
+    showMsg(
+      "recoveryMsg",
+      "密碼更新失敗：" + error.message,
+      "error"
+    );
     return;
   }
 
-  await db.auth.signOut();
+  isPasswordRecovery = false;
 
   $("newPassword").value = "";
   $("confirmNewPassword").value = "";
-  $("authPassword").value = "";
+
+  await db.auth.signOut();
 
   showMsg(
     "authMsg",
     "新密碼更新成功！請使用新密碼重新登入。",
     "success"
   );
+
+  showAuth();
 };
+
  
 $("logoutBtn").onclick=async()=>{if(db)await db.auth.signOut();};
 
