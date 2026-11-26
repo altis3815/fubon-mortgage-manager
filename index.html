@@ -211,13 +211,13 @@ function configured(){
   return SUPABASE_URL.startsWith("https://") &&
          SUPABASE_ANON_KEY.startsWith("sb_publishable_");
 }
+
 async function init(){
 
   $("authMsg").textContent = "正在初始化 Supabase...";
 
   if(!configured()){
-    $("authMsg").textContent =
-      "尚未設定 Supabase 網址及公開金鑰。";
+    $("authMsg").textContent = "尚未設定 Supabase 網址及公開金鑰。";
     return;
   }
 
@@ -237,37 +237,39 @@ async function init(){
 
     db.auth.onAuthStateChange((event, session)=>{
 
-  if(event === "PASSWORD_RECOVERY"){
-    isPasswordRecovery = true;
-    showRecovery();
-    return;
-  }
-
-  if(session){
-    user = session.user;
-    enterApp();
-  }else{
-    user = null;
-    isPasswordRecovery = false;
-    showAuth();
-  }
-
-});
-
       if(event === "PASSWORD_RECOVERY"){
+        isPasswordRecovery = true;
         showRecovery();
         return;
       }
 
-      if(session){
-        user = session.user;
-        enterApp();
-      }else{
+      if(event === "SIGNED_OUT"){
         user = null;
+        isPasswordRecovery = false;
         showAuth();
+        return;
+      }
+
+      if(session && !isPasswordRecovery){
+        user = session.user;
+        setTimeout(() => enterApp(), 0);
       }
 
     });
+
+    const {data, error} = await db.auth.getSession();
+
+    if(error){
+      throw error;
+    }
+
+    if(data.session && !isPasswordRecovery){
+      user = data.session.user;
+      await enterApp();
+    }else if(!isPasswordRecovery){
+      showAuth();
+      $("authMsg").textContent = "Supabase 初始化成功，請登入或建立帳號。";
+    }
 
   } catch(error) {
 
@@ -276,6 +278,7 @@ async function init(){
 
   }
 }
+
 function showAuth(){
   $("authPanel").classList.remove("hidden");
   $("recoveryPanel").classList.add("hidden");
@@ -393,8 +396,6 @@ $("updatePasswordBtn").onclick = async () => {
     );
     return;
   }
-
-  isPasswordRecovery = false;
 
   $("newPassword").value = "";
   $("confirmNewPassword").value = "";
