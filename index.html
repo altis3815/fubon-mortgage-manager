@@ -187,6 +187,7 @@ document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()
 
 function configured(){return !SUPABASE_URL.includes("請填入")&&!SUPABASE_ANON_KEY.includes("請填入");}
 async function init(){
+ console.log("開始執行 init()");
   if(!configured()){
     $("authMsg").textContent =
       "尚未設定 Supabase 網址及 anon public key。";
@@ -197,7 +198,7 @@ async function init(){
     SUPABASE_URL,
     SUPABASE_ANON_KEY
   );
-
+  console.log("Supabase 初始化成功：", !!db);
   db.auth.onAuthStateChange((event, session)=>{
 
     if(event === "PASSWORD_RECOVERY"){
