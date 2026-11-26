@@ -706,6 +706,17 @@ function renderAnalysis(){
  <p class="muted">目前模式：${mode==="reduce"?"降低月付金、維持原到期日":"維持月付金、縮短還款年限"}。此處新月付金為簡化估算；若利率變動、銀行重新訂定攤還期數或有費用，結果會不同。</p>`;
 }
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+async function enterApp(){
+
+  $("authPanel").classList.add("hidden");
+  $("recoveryPanel").classList.add("hidden");
+
+  $("app").classList.remove("hidden");
+  $("bottomNav").classList.remove("hidden");
+  $("logoutBtn").classList.remove("hidden");
+
+  await loadData();
+}
 init();
 </script>
 </body>
