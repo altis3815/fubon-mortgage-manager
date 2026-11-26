@@ -293,6 +293,22 @@ function showRecovery(){
   $("bottomNav").classList.add("hidden");
   $("logoutBtn").classList.add("hidden");
 }
+document.addEventListener("DOMContentLoaded", () => {
+
+  alert("JavaScript 按鈕測試程式已執行");
+
+  const signup = document.getElementById("signupBtn");
+  const login = document.getElementById("loginBtn");
+  const forgot = document.getElementById("forgotPasswordBtn");
+
+  alert(
+    "按鈕搜尋結果：\n" +
+    "建立帳號：" + !!signup + "\n" +
+    "登入：" + !!login + "\n" +
+    "忘記密碼：" + !!forgot
+  );
+
+});
 $("signupBtn").onclick=async()=>{
  if(!db){showMsg("authMsg","請先完成 Supabase 設定。","error");return;}
  const email=$("authEmail").value.trim(),password=$("authPassword").value;
