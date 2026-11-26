@@ -199,6 +199,7 @@ async function init(){
     SUPABASE_ANON_KEY
   );
   console.log("Supabase 初始化成功：", !!db);
+ $("authMsg").textContent = "Supabase 初始化成功：" + !!db;
   db.auth.onAuthStateChange((event, session)=>{
 
     if(event === "PASSWORD_RECOVERY"){
