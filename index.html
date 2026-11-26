@@ -303,35 +303,52 @@ $("loginBtn").onclick=async()=>{
  showMsg("authMsg",error?error.message:"登入成功。",error?"error":"success");
 };
 
+
 $("forgotPasswordBtn").onclick = async () => {
 
-  if(!db){
-    showMsg("authMsg","資料庫尚未連線。","error");
-    return;
+  showMsg("authMsg","正在處理密碼重設要求...");
+
+  try {
+
+    if(!db){
+      showMsg("authMsg","資料庫尚未連線，請重新整理網頁。","error");
+      return;
+    }
+
+    const email = $("authEmail").value.trim();
+
+    if(!email){
+      showMsg("authMsg","請先輸入註冊時使用的 Email。","error");
+      return;
+    }
+
+    const {data,error} = await db.auth.resetPasswordForEmail(email,{
+      redirectTo: "https://altis3815.github.io/fubon-mortgage-manager/"
+    });
+
+    if(error){
+      showMsg("authMsg","寄送失敗："+error.message,"error");
+      return;
+    }
+
+    showMsg(
+      "authMsg",
+      "重設密碼要求已送出，請檢查 Email 收件匣及垃圾郵件。",
+      "success"
+    );
+
+  } catch(error) {
+
+    showMsg(
+      "authMsg",
+      "執行錯誤："+error.message,
+      "error"
+    );
+
   }
 
-  const email = $("authEmail").value.trim();
-
-  if(!email){
-    showMsg("authMsg","請先輸入註冊時使用的 Email。","error");
-    return;
-  }
-
-  const {error} = await db.auth.resetPasswordForEmail(email,{
-  redirectTo: "https://altis3815.github.io/fubon-mortgage-manager/"
-});
-
-  if(error){
-    showMsg("authMsg","寄送失敗："+error.message,"error");
-    return;
-  }
-
-  showMsg(
-    "authMsg",
-    "重設密碼要求已送出。請檢查 Email 收件匣及垃圾郵件。",
-    "success"
-  );
 };
+
 
 let isPasswordRecovery = false;
 
